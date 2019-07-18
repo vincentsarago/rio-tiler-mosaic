@@ -105,6 +105,10 @@ The rules for writing your own `pixel selection algorithm` class are as follows:
 
 See [rio_tiler_mosaic.methods.defaults](/rio_tiler_mosaic/defaults.py) classes for examples.
 
+## Example
+
+See [/example](/example)
+
 ## Contribution & Development
 
 Issues and pull requests are more than welcome.
