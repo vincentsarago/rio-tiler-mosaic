@@ -91,20 +91,7 @@ def mosaic_tiler(
     max_threads = int(max_threads)
 
     if max_threads <= 1:
-        for asset in assets:
-            try:
-                t, m = _tiler(asset)
-            except Exception:
-                continue
-
-            t = numpy.ma.array(t)
-            t.mask = m == 0
-
-            pixel_selection.feed(t)
-            if pixel_selection.is_done:
-                return pixel_selection.data
-
-        return pixel_selection.data
+        return _single_threaded(assets, _tiler, pixel_selection)
 
     if not chunk_size:
         chunk_size = max_threads
@@ -120,5 +107,24 @@ def mosaic_tiler(
             pixel_selection.feed(t)
             if pixel_selection.is_done:
                 return pixel_selection.data
+
+    return pixel_selection.data
+
+
+def _single_threaded(assets, _tiler, pixel_selection):
+    """Single threaded asset fetching and combination
+    """
+    for asset in assets:
+        try:
+            t, m = _tiler(asset)
+        except Exception:
+            continue
+
+        t = numpy.ma.array(t)
+        t.mask = m == 0
+
+        pixel_selection.feed(t)
+        if pixel_selection.is_done:
+            return pixel_selection.data
 
     return pixel_selection.data
