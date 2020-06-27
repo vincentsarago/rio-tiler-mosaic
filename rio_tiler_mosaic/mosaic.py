@@ -42,6 +42,7 @@ def mosaic_tiler(
     tiler,
     pixel_selection=None,
     chunk_size=None,
+    max_threads=os.getenv("MAX_THREADS", multiprocessing.cpu_count() * 5),
     **kwargs
 ):
     """
@@ -64,6 +65,10 @@ def mosaic_tiler(
         default: "rio_tiler_mosaic.methods.defaults.FirstMethod".
     chunk_size: int, optional
         Control the number of asset to process per loop (default = MAX_THREADS).
+    max_threads: int, optional
+        Number of threads to use. If <=1, runs single threaded without an event
+        loop. By default reads from the MAX_THREADS environment variable, and if
+        not found defaults to multiprocessing.cpu_count() * 5.
     kwargs: dict, optional
         Rio-tiler tiler module specific options.
 
@@ -83,7 +88,24 @@ def mosaic_tiler(
         )
 
     _tiler = partial(tiler, tile_x=tile_x, tile_y=tile_y, tile_z=tile_z, **kwargs)
-    max_threads = int(os.environ.get("MAX_THREADS", multiprocessing.cpu_count() * 5))
+    max_threads = int(max_threads)
+
+    if max_threads <= 1:
+        for asset in assets:
+            try:
+                t, m = _tiler(asset)
+            except Exception:
+                continue
+
+            t = numpy.ma.array(t)
+            t.mask = m == 0
+
+            pixel_selection.feed(t)
+            if pixel_selection.is_done:
+                return pixel_selection.data
+
+        return pixel_selection.data
+
     if not chunk_size:
         chunk_size = max_threads
 
